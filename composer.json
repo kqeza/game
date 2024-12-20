@@ -1,0 +1,9 @@
+{
+    "name": "prince/my-app",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Prince\\MyApp\\": "src/"
+        }
+    }
+}

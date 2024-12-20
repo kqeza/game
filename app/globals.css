@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.square:focus {
+  outline: none;
+  /* Убирает стандартное обводку при фокусе */
+  border: 2px solid #0859e5;
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.5);
+
+}
+
+.piece {
+  font-size: 7vh;
+  /* Adjust the value as needed */
+
+  background-color: #000000;
+}
+
+.row {
+  margin: 0;
+  padding: -5%;
+}
+
+.square {
+  margin: 0px;
+  padding: 35;
+}

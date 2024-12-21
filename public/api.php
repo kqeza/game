@@ -14,7 +14,7 @@ function exception_handler(\Throwable $exception) {
 }
 
 
-set_exception_handler('exception_handler'); 
+set_exception_handler('Chess\exception_handler'); 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: http://localhost:3000');
 class Board
@@ -386,7 +386,7 @@ class Board
 
     }
 
-   private function getPossibleMovesPHP(array $from, string $currentPlayer): array
+   public function getPossibleMovesPHP(array $from, string $currentPlayer): array
     {
         $piece = $this->board[$from['row']][$from['col']];
         $moves = [];

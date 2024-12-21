@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { Square } from './Square';
+import axios from 'axios';
 
 const initialBoard = [
     ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
@@ -14,7 +15,7 @@ const initialBoard = [
 ];
 
 export function Board() {
-    const [boardState, setBoardState] = useState(initialBoard);
+    const [boardState, setBoardState] = useState<any[][] | undefined>(undefined);
     const [selectedSquare, setSelectedSquare] = useState<null | { row: number, col: number }>(null);
     const [possibleMoves, setPossibleMoves] = useState<{ row: number, col: number }[]>([]);
     const [currentPlayer, setCurrentPlayer] = useState('user');
@@ -31,32 +32,67 @@ export function Board() {
         }
     });
 
+    useEffect(() => {
+        const fetchInitialBoard = async () => {
+            try {
+                const response = await axios({
+                    method: 'post',
+                    url: 'http://127.0.0.1:8000/chess',
+                    data: {},
+                });
+
+                const data = response.data;
+                console.log('fetchInitialBoard', data);
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                setBoardState(data.board);
+                setCastling(data.castling);
+            } catch (error) {
+                console.error('Error fetching initial board:', error);
+                alert(error);
+            }
+        };
+
+        fetchInitialBoard();
+    }, []);
+
     const handleClick = async (row: number, col: number) => {
+        console.log('click', row, col);
         if (currentPlayer === 'bot' || isCheckMate || isStaleMate) {
             return;
         }
 
         if (selectedSquare === null) {
-            // Если клетка не выбрана, проверяем, есть ли на ней фигура текущего игрока
-            if (boardState[row][col] &&
+            if (boardState && boardState[row][col] &&
                 ((currentPlayer === 'user' && boardState[row][col] === boardState[row][col].toUpperCase()) ||
                     (currentPlayer === 'bot' && boardState[row][col] === boardState[row][col].toLowerCase()))
+
             ) {
-                // Если фигура текущего игрока есть, запоминаем ее координаты и запрашиваем возможные ходы
+                console.log('Selected', row, col);
                 setSelectedSquare({ row, col });
-                const possibleMovesResponse = await fetch('/api.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ board: boardState, from: { row, col }, castling: castling, currentPlayer: currentPlayer }),
-                });
-                const possibleMovesData = await possibleMovesResponse.json();
-                if (possibleMovesData.error) {
-                    throw new Error(possibleMovesData.error);
+
+                try {
+                    const possibleMovesResponse = await axios({
+                        method: 'post',
+                        url: 'http://127.0.0.1:8000/chess',
+                        data:
+                        {
+                            board: boardState,
+                            from: { row: parseInt(row.toString()), col: parseInt(col.toString()) },
+                            castling: castling,
+                            currentPlayer: currentPlayer
+                        },
+                    });
+
+                    const possibleMovesData = possibleMovesResponse.data;
+                    setPossibleMoves(possibleMovesData.possibleMoves || []);
+                }
+                catch (error) {
+                    console.log(error);
+                    alert(error);
                 }
 
-                setPossibleMoves(possibleMovesData.possibleMoves || []);
             }
         } else {
             handleMove(row, col);
@@ -65,46 +101,41 @@ export function Board() {
         }
     };
 
+
     // Функция для превращения пешки
     const handlePawnPromotion = async (newBoard: any, move: any, promotedPiece: any) => {
         if (move.to.row === 0 || move.to.row === 7) {
-
             if ((move.to.row === 0 && newBoard[move.to.row][move.to.col] === 'P') || (move.to.row === 7 && newBoard[move.to.row][move.to.col] === 'p')) {
-
                 newBoard[move.to.row][move.to.col] = promotedPiece;
             }
-
         }
-
         return newBoard;
     }
+
 
     // Функция для обработки хода
     const handleMove = async (row: number, col: number) => {
         if (selectedSquare === null) {
             return;
         }
+        console.log('Board state', boardState);
 
-        // Создаем объект хода для отправки на сервер
         let move = { from: selectedSquare, to: { row, col }, board: boardState, castling: castling, currentPlayer: currentPlayer };
         try {
-            // Отправляем запрос на сервер
-            const response = await fetch('/api.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(move),
+            const response = await axios({
+                method: 'post',
+                url: 'http://127.0.0.1:8000/chess',
+                data: move
             });
-            const data = await response.json();
+            const data = response.data;
             if (data.error) {
                 throw new Error(data.error);
             }
 
-
             let updatedBoardState = await handlePawnPromotion(data.board, move, 'Q');
             setBoardState(updatedBoardState)
             setCastling(data.castling);
+
 
             if (data.botMove) {
                 let updatedBoardStateBot = await handlePawnPromotion(data.board, data.botMove, 'q');
@@ -121,9 +152,12 @@ export function Board() {
             } else {
                 setCurrentPlayer('user')
             }
+            console.log('Board state', boardState);
 
-        } catch (error) {
-            console.error('Error:', error);
+
+        }
+        catch (error) {
+            console.log(error);
             alert(error);
         }
     };
@@ -141,7 +175,7 @@ export function Board() {
 
     return (
         <div className="board relative w-full h-full flex flex-col border-2 border-gray-700 shadow-md">
-            {boardState.map((row, rowIndex) => (
+            {boardState && boardState.map((row, rowIndex) => (
                 <div key={rowIndex} className="row flex w-full h-[calc(100%/8)]">
                     {row.map((piece, colIndex) => (
                         <Square

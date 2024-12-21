@@ -5,5 +5,9 @@
         "psr-4": {
             "Prince\\MyApp\\": "src/"
         }
+    },
+    "require": {
+        "symfony/webapp-pack": "^1.3",
+        "symfony/webpack-encore-bundle": "^2.2"
     }
 }
